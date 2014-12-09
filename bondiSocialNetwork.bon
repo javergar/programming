@@ -1,0 +1,94 @@
+(* An example of first class patterns in action
+@description an example on how to use pattern matching to query data structures.
+@author Jose Vergara.
+@since 20 Nov 2014.
+@version 1.0
+%open "bondiSocialNetwork.bon";;
+*)
+
+(* Some algebraic datatypes *)
+datatype Like a b = Like of a and b;;
+datatype Name     =  Name of String;;
+datatype Person   =  Person of Name;;
+datatype Friend   =  Friend of Person and Person;;
+datatype Title    =  Title of String;;
+datatype Author   =  Author of String;;
+datatype Objects  =  Book of Title * Author | Movie of String;;
+datatype Gps      =  Gps of Int;;
+datatype Location =  Location of Name and Gps;;
+datatype ChekedIn =  ChekedIn of Person and Location;;
+
+(* making a mockup database *)
+let db = 
+( Friend   (Person (Name "Bart"))     (Person (Name "Milhouse")),
+  Friend   (Person (Name "Bart"))     (Person (Name "Krusty"  )) ,
+  Like     (Person (Name "Bart"))     (Book  (Title "The hobbit",Author "J.R.R. Tolkien")),
+  Like     (Person (Name "Krusty"))   (Book  (Title "Pagliacci (Libretto)",Author "Ruggero Leoncavallo")),
+  Like     (Person (Name "Krusty"))   (Movie "Killer Klowns from Outer Space"),
+  Like     (Person (Name "Milhouse")) (Movie "The Lego movie"),
+  ChekedIn (Person (Name "Krusty"))   (Location (Name "Sydney Opera House") (Gps 23266755))
+);;
+
+
+(* A first oder pattern "Like (Person (Name "Bart"))",  Select all persons named "Bart" *)
+select (| Like (Person (Name "Bart")) x -> Some x | _ -> None) db;;
+   
+(* First order pattern, Select Bart's friends *)
+let bart_friends = (select (| Friend (Person (Name "Bart")) x -> Some x | _ -> None) db);;              
+
+(* Second order query, "y" can be now substitued by a pattern *)
+let liked_by (y: lin a) db = 
+    select (| {x} Like y x -> Some x | _ -> None) db
+;;
+
+(* Applies the substitution "{(Person (Name "Krusty") / y}" to "Like y x" *)
+liked_by (Person (Name "Krusty"));;
+
+liked_by (Person (Name "Krusty")) sb;;
+
+(* Second order query, Select all things liked by someones friend *)
+let rec (liked_by_friends: a ->  c -> List a) friends  db = 
+ match friends with
+  | Cons x xs -> append (liked_by x db) (liked_by_friends xs db)
+  | _       -> Nil
+;;
+ 
+liked_by_friends bart_friends db
+;;
+
+liked_by_friends (Cons (Person (Name "Bart")) bart_friends) db
+;;
+
+(* select objects described by pattern "a" liked by some other object described by pattern "b" *)
+let obj_liked_by (x:lin a) (y: lin b) db = 
+    select (| {d} Like y (x d) -> Some (x d) | _ -> None) db
+;;
+
+obj_liked_by Book (Person (Name "Bart")) db
+;;
+
+obj_liked_by Movie (Person (Name "Krusty")) db
+;;
+
+(* More general queries *)
+let rec obj_liked_by_friends obj friends db = 
+ match friends with
+  | Cons x xs -> append (obj_liked_by obj x db) (obj_liked_by_friends obj xs db)
+  | _       -> Nil
+;;
+
+obj_liked_by_friends Book bart_friends db;;
+
+obj_liked_by_friends Movie bart_friends db;;
+
+(* Even more general queries *)
+let obj_action_by (x:lin a)(z: lin c) (y: lin b) db = 
+    select (| {d} z y (x d) -> Some (x d) | _ -> None) db
+;;
+
+obj_action_by Book   Like (Person (Name "Krusty")) db;;
+obj_action_by Movie  Like (Person (Name "Milhouse")) db;;
+obj_action_by Book Like _ db;;
+obj_action_by Person Friend _ db;;
+
+
