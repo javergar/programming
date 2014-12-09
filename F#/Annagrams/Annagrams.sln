@@ -1,0 +1,20 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{4925A630-B079-445d-BCD4-3A9C94FE9307}") = "Annagrams", "Annagrams\Annagrams.fsproj", "{09CC83C3-740E-4917-984F-817BD73A1C4B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x86 = Debug|x86
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{09CC83C3-740E-4917-984F-817BD73A1C4B}.Debug|x86.ActiveCfg = Debug|x86
+		{09CC83C3-740E-4917-984F-817BD73A1C4B}.Debug|x86.Build.0 = Debug|x86
+		{09CC83C3-740E-4917-984F-817BD73A1C4B}.Release|x86.ActiveCfg = Release|x86
+		{09CC83C3-740E-4917-984F-817BD73A1C4B}.Release|x86.Build.0 = Release|x86
+	EndGlobalSection
+	GlobalSection(MonoDevelopProperties) = preSolution
+		StartupItem = Annagrams\Annagrams.fsproj
+	EndGlobalSection
+EndGlobal

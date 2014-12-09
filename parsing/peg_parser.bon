@@ -1,0 +1,214 @@
+(* Parsing combinators library
+@description Provides generic functions that allow parsing
+@author Jose Vergara.
+@since 20 Nov 2013.
+@version 1.0
+%open "parserlib.bon";;
+*)
+
+(* %open "peg_parser.bon";; *)
+
+%open "parserlib.bon";;
+
+
+(* Tokenizers ADT *)
+
+datatype Token =  IntToken of String 
+                | FloatToken of String 
+                | SymbToken of String 
+                | LowerCaseIdentToken of String
+                | UpperCaseIdentToken of String
+;;
+
+
+type ParserArgument = Int * array Token;;
+datatype ParserResult a = Parsed of Int * a | NotParsed ;;
+
+
+
+let (get_result: ParserResult a -> a) = 
+| Parsed(_,x) -> x
+| NotParsed -> Exception "no result"
+;;
+
+
+let symbolParser = (choiceParser ".&#*/:;+=,_@?|!%()-$^{}<>[]\\")
+;;
+
+let delim = many wspacechar
+;;
+
+let defaultParser (pa:ParserArgument) = NotParsed
+;;
+
+let spt x =
+sat (fun x->x) (sp x)
+;;
+
+
+let intParserADT =
+intParser >>= (fun x ->  delim >> return (IntToken x))
+;;
+
+let floatParserADT =
+floatParser >>= (fun x -> delim >> return (FloatToken x))
+;;
+
+let symbParserADT = 
+symbolParser >>= (fun x ->  delim >> return (SymbToken x))
+;;
+
+let lowercaseIdentParserADT =
+lowercaseIdentParser >>= (fun x -> delim >> return (LowerCaseIdentToken x))
+;;
+let uppercaseIdentParserADT =
+uppercaseIdentParser >>= (fun x -> delim >> return (UpperCaseIdentToken x))
+;;
+
+
+
+let make_array xs =
+let res = newarray (IntToken "") (length xs) in
+let i = Ref 0 in
+let (set_val: a -> Unit) x =
+match x with
+| IntToken   _  -> entry(res,!i)=x;i=(!i)+1
+| FloatToken _  -> entry(res,!i)=x;i=(!i)+1
+| SymbToken  _  -> entry(res,!i)=x;i=(!i)+1
+| LowerCaseIdentToken _  -> entry(res,!i)=x;i=(!i)+1
+| UpperCaseIdentToken _  -> entry(res,!i)=x;i=(!i)+1
+| _          -> () in
+iter set_val xs;res
+;;
+
+
+let fetch_token  = ((| (ndx,tokens) -> 
+if (lengthv tokens) > ndx
+then
+Some (!(entry(tokens,ndx)))
+else
+None
+): ParserArgument -> Maybe Token)
+;; 
+
+
+let lexer input = 
+let myList = Ref ([]:List Token) in
+let tokens = 
+  (((floatParserADT <|> 
+	intParserADT) <|> 
+	symbParserADT) <|> 
+	lowercaseIdentParserADT) <|> 
+	uppercaseIdentParserADT 
+in
+((wspace >> (many tokens)) >>= (fun x -> myList = x; return x)) (inputStr input);
+(make_array !myList) 
+;;
+
+
+
+let (parseValue: (ParserArgument-> ParserResult a)-> 
+                  ParserArgument-> ParserResult a) p =
+| (ndx,tokens) as args -> 
+if (lengthv tokens) > ndx then
+p args
+else
+NotParsed
+;;
+
+
+let (stx_parser: String -> ParserArgument -> ParserResult String) str =
+| (ndx,toks) -> 
+let rec (match_toks: array Token -> Int -> array Token -> Int -> ParserResult String) ps ip ts it  =
+if (((lengthv ps)-ip) <= ((lengthv ts)-it)) then
+     match  (fetch_token (ip,ps),fetch_token (it,ts)) with  ((
+     | (Some p,Some t)  -> if (p==t && (it < (lengthv ts))) then
+			      if (ip == ((lengthv ps) - 1)) then
+			      Parsed (it+1,str)
+			      else 
+			      match_toks ps (ip+1) ts (it+1)
+                              else
+                              NotParsed
+    | _ -> NotParsed): (Maybe Token) * (Maybe Token) -> ParserResult String)
+else
+NotParsed
+in match_toks (lexer str) 0 toks ndx
+;;
+
+
+let keyword (str:String) = ((| view(stx_parser str,Parsed _) -> NotParsed
+): ParserArgument -> ParserResult a);;
+
+
+let ((.>>=): (ParserArgument-> ParserResult a) -> (a-> (ParserArgument-> ParserResult b)) -> 
+                                                       (ParserArgument-> ParserResult b)) p q =
+| (ndx,tokens) ->
+  match p (ndx,tokens) with
+  | Parsed (ndx1,res) -> (q res) (ndx1,tokens)
+  | NotParsed -> NotParsed
+;;
+
+let ((.>>): (ParserArgument-> ParserResult a) -> (ParserArgument-> ParserResult b) -> 
+                                                      (ParserArgument-> ParserResult b)) p q =
+| (ndx,tokens) ->
+  match p (ndx,tokens) with
+  | Parsed (ndx1,res) -> q (ndx1,tokens)
+  | NotParsed -> NotParsed
+;;
+
+let ((.<|>): (ParserArgument-> ParserResult a) -> 
+	     (ParserArgument-> ParserResult a) -> 
+             (ParserArgument-> ParserResult a)) p q s =
+  match p s with ((
+  | res as Parsed(_,_)  -> res
+  | NotParsed -> q s
+):  ParserResult a -> ParserResult a)
+;;
+
+let (ret: a -> ParserArgument -> (ParserResult a)) val = 
+| (ndx,tokens) ->
+Parsed (ndx,val)
+;;
+
+
+let (parseOne: Token -> a -> ParserArgument -> ParserResult a) token val args = 
+  if fetch_token args == Some token 
+  then Parsed(fst args +1,val)
+  else NotParsed 
+;;
+
+let parseApplyOne (x: lin (a -> b)) (f: a -> b1) (args:ParserArgument) =
+match fetch_token args with
+((|{y} Some (x y) -> Parsed(fst args +1,f y)
+ | _ -> NotParsed
+): Maybe a1 -> ParserResult b1)
+;;
+
+let (parseInt: ParserArgument -> ParserResult a)  args = 
+  match fetch_token args with
+  | Some (IntToken x) -> Parsed (fst args+1,x)
+  | _ ->NotParsed 
+;;
+
+let parseUpper str  = parseOne (UpperCaseIdentToken str) ;;
+
+let parseAnyLowerCase x = parseApplyOne LowerCaseIdentToken x;;
+
+let  (parseMany : (ParserArgument -> ParserResult a) -> ParserArgument -> ParserResult (List a)) p args = 
+let rec (pm: (ParserArgument -> ParserResult a) -> List a -> ParserArgument -> ParserResult (List a)) 
+	p es args = 
+match p args with 
+| Parsed(ndx,e) -> pm p (Cons e es) (ndx,snd args)
+| NotParsed -> Parsed(fst args,es)
+in 
+match pm p [] args with
+| Parsed(ndx, es) -> Parsed(ndx,reverse es) 
+| x -> x
+;;
+
+
+let  (maybe1 : (ParserArgument -> ParserResult a) -> ParserArgument -> ParserResult (List a)) p args = 
+match p args with
+| Parsed(ndx,e) -> Parsed(ndx,[e]) 
+| NotParsed -> Parsed(fst args,[])
+;;

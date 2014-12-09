@@ -1,0 +1,20 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{4925A630-B079-445d-BCD4-3A9C94FE9307}") = "Quicksort", "Quicksort\Quicksort.fsproj", "{6A643B2B-0B90-4BEC-970B-FEF011DF51A9}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x86 = Debug|x86
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6A643B2B-0B90-4BEC-970B-FEF011DF51A9}.Debug|x86.ActiveCfg = Debug|x86
+		{6A643B2B-0B90-4BEC-970B-FEF011DF51A9}.Debug|x86.Build.0 = Debug|x86
+		{6A643B2B-0B90-4BEC-970B-FEF011DF51A9}.Release|x86.ActiveCfg = Release|x86
+		{6A643B2B-0B90-4BEC-970B-FEF011DF51A9}.Release|x86.Build.0 = Release|x86
+	EndGlobalSection
+	GlobalSection(MonoDevelopProperties) = preSolution
+		StartupItem = Quicksort\Quicksort.fsproj
+	EndGlobalSection
+EndGlobal
